@@ -3,7 +3,7 @@ Dependencies
 node_modules/
 jspm_packages/
 
-Environment Variables (Secrets)
+Environment Variables
 
 .env
 .env.local
@@ -35,7 +35,7 @@ IDE Settings
 *.swp
 *.swo
 
-Build/Dist (if applicable)
+Build/Dist
 
 dist/
 build/

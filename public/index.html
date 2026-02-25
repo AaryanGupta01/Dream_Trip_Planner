@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bharat Explorer | Mood-Based Travel Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; scroll-behavior: smooth; }
+        .gradient-text { background: linear-gradient(90deg, #f97316, #ea580c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .modal-bg { transition: all 0.3s ease-out; opacity: 0; pointer-events: none; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); }
+        .modal-bg.active { opacity: 1; pointer-events: auto; }
+        .modal-content { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(20px) scale(0.95); }
+        .active .modal-content { transform: translateY(0) scale(1); }
+        
+        .filter-chip { transition: all 0.2s ease; border: 1px solid #e2e8f0; cursor: pointer; }
+        .filter-chip.active { background-color: #ea580c; color: white; border-color: #ea580c; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3); }
+        
+        .rush-bar {
+             height: 6px;
+             background: #e2e8f0;
+             border-radius: 10px; 
+             overflow: hidden; 
+             position: relative; 
+        }
+        .rush-fill {
+            height: 100%;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .shimmer {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer-load 1.5s infinite;
+        }
+        @keyframes shimmer-load {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Header Navigation -->
+    <header class="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="resetFilters()">
+                <i class="fa-solid fa-map-location-dot text-orange-600 text-2xl"></i>
+                <span class="font-bold text-xl tracking-tight hidden sm:inline">Bharat<span class="text-orange-600">Explorer</span></span>
+            </div>
+            
+            <div class="flex items-center space-x-2 md:space-x-4">
+                <button onclick="toggleFavoritesOnly()" id="favToggleBtn" class="flex items-center space-x-2 px-3 py-2 rounded-full border hover:bg-slate-50 transition-all">
+                    <i class="fa-solid fa-heart text-slate-300 transition-colors" id="favIconHeader"></i>
+                    <span class="text-sm font-semibold hidden md:inline">Favorites</span>
+                </button>
+                <button onclick="openTripModal()" class="flex items-center space-x-2 px-4 py-2 bg-slate-900 text-white rounded-full hover:bg-slate-800 transition-all shadow-md">
+                    <i class="fa-solid fa-suitcase"></i>
+                    <span class="text-sm font-semibold">My Trip</span>
+                    <span id="tripBadge" class="bg-orange-500 text-[10px] w-5 h-5 flex items-center justify-center rounded-full ml-1 hidden">0</span>
+                </button>
+                
+                <!-- NEW: Separate Join/Login logic -->
+                <div id="authGroup" class="flex items-center space-x-2">
+                    <button onclick="openAuthModal('signup')" id="joinBtn" class="hidden sm:block text-xs font-bold text-orange-600 px-4 py-2 border border-orange-100 rounded-full hover:bg-orange-50 transition-all">Join Now</button>
+                    <button onclick="openAuthModal('login')" id="loginBtn" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center border hover:shadow-inner transition-all">
+                        <i class="fa-solid fa-user text-slate-500" id="userStatusIcon"></i>
+                    </button>
+                </div>
+                
+                <button id="logoutBtn" onclick="handleLogout()" class="hidden flex items-center space-x-2 px-3 py-2 bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition-all">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <!-- Hero Section -->
+        <section class="text-center mb-12">
+            <h1 class="text-4xl md:text-6xl font-extrabold mb-6">Discover Your Next <span class="gradient-text">Adventure</span></h1>
+            <div class="max-w-2xl mx-auto relative group">
+                <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors"></i>
+                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Search by city, state, or vibe..." 
+                       class="w-full pl-14 pr-6 py-5 bg-white border border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-lg">
+            </div>
+        </section>
+
+        <!-- Filters Section -->
+        <section class="bg-white rounded-3xl p-8 shadow-sm border mb-10">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">What's the vibe?</h3>
+                    <div class="flex flex-wrap gap-2" id="moodFilters">
+                        <button onclick="setFilter('mood', 'Adventurous')" class="filter-chip px-4 py-2 rounded-xl text-sm font-bold">🧗 Adventurous</button>
+                        <button onclick="setFilter('mood', 'Relaxed')" class="filter-chip px-4 py-2 rounded-xl text-sm font-bold">🧘 Relaxed</button>
+                        <button onclick="setFilter('mood', 'Spiritual')" class="filter-chip px-4 py-2 rounded-xl text-sm font-bold">🪔 Spiritual</button>
+                        <button onclick="setFilter('mood', 'Party')" class="filter-chip px-4 py-2 rounded-xl text-sm font-bold">🎉 Party</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Set your budget</h3>
+                    <div class="flex flex-wrap gap-2" id="budgetFilters">
+                        <button onclick="setFilter('budget', 'Budget')" class="filter-chip px-4 py-2 rounded-xl text-sm font-bold">₹ Economy</button>
+                        <button onclick="setFilter('budget', 'Mid-range')" class="filter-chip px-4 py-2 rounded-xl text-sm font-bold">₹₹ Standard</button>
+                        <button onclick="setFilter('budget', 'Luxury')" class="filter-chip px-4 py-2 rounded-xl text-sm font-bold">₹₹₹ Luxury</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Preferred Season</h3>
+                    <div class="flex flex-wrap gap-2" id="seasonFilters">
+                        <button onclick="setFilter('season', 'Summer')" class="filter-chip px-4 py-2 rounded-xl text-sm font-bold">☀️ Summer</button>
+                        <button onclick="setFilter('season', 'Winter')" class="filter-chip px-4 py-2 rounded-xl text-sm font-bold">❄️ Winter</button>
+                        <button onclick="setFilter('season', 'Monsoon')" class="filter-chip px-4 py-2 rounded-xl text-sm font-bold">🌧️ Monsoon</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results -->
+        <div id="destinationGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+
+        <div id="emptyState" class="hidden text-center py-32">
+            <h3 class="text-2xl font-bold mb-2">No matching getaways found</h3>
+            <button onclick="resetFilters()" class="text-orange-600 font-bold">Reset Filters</button>
+        </div>
+    </main>
+
+    <!-- FLOATING AI DISCOVERY PANEL -->
+    <div id="agentContainer" class="fixed bottom-6 right-6 w-[22rem] z-40 hidden pointer-events-none">
+        <div class="bg-white rounded-[2.5rem] border border-indigo-100 shadow-2xl overflow-hidden flex flex-col max-h-[550px] pointer-events-auto transform transition-transform hover:scale-[1.02]">
+            <div class="bg-indigo-600 p-6 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm">Route Optimizer</h4>
+                        <p class="text-[10px] text-indigo-100 uppercase tracking-widest font-bold">n8n AI Discovery</p>
+                    </div>
+                </div>
+                <button id="agentCallBtn" onclick="callN8nAgent()" class="px-4 py-2 bg-white text-indigo-600 text-xs font-bold rounded-xl shadow-sm">Optimize</button>
+            </div>
+            
+            <div class="p-6 bg-indigo-50/30 overflow-y-auto no-scrollbar flex-grow">
+                <div id="agentResults" class="hidden">
+                    <div id="agentLoading" class="space-y-3 hidden"><div class="h-4 w-3/4 shimmer rounded-full"></div><div class="h-12 w-full shimmer rounded-2xl"></div></div>
+                    <div id="agentContent" class="space-y-4"></div>
+                </div>
+                <div id="agentInitialMsg" class="py-8 text-center">
+                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-50"><i class="fa-solid fa-route text-indigo-300"></i></div>
+                    <p class="text-xs font-bold text-indigo-900">Plan your stops</p>
+                    <p class="text-[10px] text-slate-400">Add 2+ stops to unlock a curated 2-day guide.</p>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 bg-white border-t border-indigo-50 flex justify-between items-center">
+                <span id="aiTripCounter" class="text-[10px] font-bold text-slate-400">0 Cities</span>
+                <button onclick="openTripModal()" class="text-xs font-bold text-indigo-600">View Itinerary</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal-bg fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="modal-content bg-white w-full max-w-sm rounded-[2.5rem] p-10 text-center shadow-2xl relative">
+            <button onclick="closeModal('authModal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            
+            <!-- Login View -->
+            <div id="loginForm">
+                <h3 class="text-2xl font-bold mb-2">Welcome Back</h3>
+                <p class="text-slate-400 text-xs mb-8">Login to access your saved trips.</p>
+                <div class="space-y-4 mb-6">
+                    <input type="email" id="authEmail" placeholder="Email Address" class="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-orange-500/20">
+                    <input type="password" id="authPass" placeholder="Password" class="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-orange-500/20">
+                </div>
+                <button onclick="handleLogin()" class="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 shadow-lg">Login</button>
+                <p class="mt-6 text-sm text-slate-500">Don't have an account? <button onclick="switchToSignup()" class="text-orange-600 font-bold hover:underline">Register</button></p>
+            </div>
+
+            <!-- Signup View -->
+            <div id="signupForm" class="hidden">
+                <h3 class="text-2xl font-bold mb-2">Create Account</h3>
+                <p class="text-slate-400 text-xs mb-8">Start planning your Indian adventure.</p>
+                <div class="space-y-4 mb-6">
+                    <input type="email" id="signupEmail" placeholder="Email Address" class="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none">
+                    <input type="password" id="signupPass" placeholder="Password" class="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none">
+                </div>
+                <button onclick="handleSignup()" class="w-full py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 shadow-lg shadow-orange-600/20">Sign Up</button>
+                <p class="mt-6 text-sm text-slate-500">Already a member? <button onclick="switchToLogin()" class="text-orange-600 font-bold hover:underline">Login</button></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="modal-bg fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="modal-content bg-white w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl relative">
+            <div id="modalHeader" class="h-64 relative flex items-end">
+                <img id="modalImg" src="" class="absolute inset-0 w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                <button onclick="closeModal('detailsModal')" class="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full text-white"><i class="fa-solid fa-xmark"></i></button>
+                <div class="relative p-8 text-white">
+                    <h3 id="modalTitle" class="text-3xl font-bold"></h3>
+                    <p id="modalLoc" class="opacity-80 flex items-center mt-1"><i class="fa-solid fa-location-dot mr-2"></i><span></span></p>
+                </div>
+            </div>
+            <div class="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div><h4 class="text-xs font-bold text-slate-400 uppercase mb-4">Local Food</h4><ul id="modalDishes" class="space-y-2"></ul></div>
+                <div><h4 class="text-xs font-bold text-slate-400 uppercase mb-4">Restaurants</h4><div id="modalRestaurants" class="space-y-2"></div></div>
+                <div><h4 class="text-xs font-bold text-slate-400 uppercase mb-4">Highlights</h4><div id="modalTouristPlaces" class="space-y-2"></div></div>
+            </div>
+            <div class="p-8 border-t flex gap-4">
+                <button id="itineraryBtn" class="flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-600/20">Add to My Trip</button>
+                <button onclick="closeModal('detailsModal')" class="px-8 py-4 border rounded-2xl font-bold">Maybe Later</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trip Modal -->
+    <div id="tripModal" class="modal-bg fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="modal-content bg-white w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl p-8 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">My Itinerary</h2>
+                <button onclick="closeModal('tripModal')"><i class="fa-solid fa-xmark text-slate-400"></i></button>
+            </div>
+            <div id="tripList" class="space-y-4 overflow-y-auto pr-2 no-scrollbar flex-grow"></div>
+            <button onclick="alertMessage('PDF Guide coming soon!')" class="w-full py-4 mt-6 bg-slate-900 text-white font-bold rounded-2xl shadow-xl">Download Plan</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        const N8N_URL = 'https://ag08.app.n8n.cloud/webhook-test/tourist-places';
+        
+        const DESTINATIONS = [
+            { id: 1, name: 'Rishikesh', location: 'Uttarakhand', mood: 'Spiritual', budget: 'Budget', season: 'Winter', image: 'https://images.unsplash.com/photo-1607406374368-809f8ec7f118?w=800&auto=format&fit=crop', description: 'The Yoga Capital of the World.', rush: { peak: 85, quiet: 20, peakT: '10 AM', quietT: '5 AM' }, dishes: ['Aloo Puri', 'Chai'], restaurants: ['Little Buddha Cafe'], touristPlaces: ['Beatles Ashram', 'Laxman Jhula'] },
+            { id: 2, name: 'Goa', location: 'West Coast', mood: 'Party', budget: 'Mid-range', season: 'Winter', image: 'https://images.unsplash.com/photo-1625505826533-5c80aca7d157?w=800&auto=format&fit=crop', description: 'Legendary nightlife and beaches.', rush: { peak: 95, quiet: 15, peakT: '10 PM', quietT: '8 AM' }, dishes: ['Fish Thali', 'Bebinca'], restaurants: ['Britto’s'], touristPlaces: ['Baga Beach', 'Aguada Fort'] },
+            { id: 3, name: 'Leh-Ladakh', location: 'Ladakh', mood: 'Adventurous', budget: 'Mid-range', season: 'Summer', image: 'https://images.unsplash.com/photo-1593118845043-359e5f628214?w=800&auto=format&fit=crop', description: 'High-altitude desert peaks.', rush: { peak: 60, quiet: 10, peakT: '12 PM', quietT: '9 PM' }, dishes: ['Thukpa', 'Momos'], restaurants: ['Tibetan Kitchen'], touristPlaces: ['Pangong Lake', 'Khardung La'] },
+            { id: 4, name: 'Alleppey', location: 'Kerala', mood: 'Relaxed', budget: 'Mid-range', season: 'Winter', image: 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=800&auto=format&fit=crop', description: 'Venice of the East.', rush: { peak: 50, quiet: 25, peakT: '11 AM', quietT: '5 PM' }, dishes: ['Appam Stew'], restaurants: ['Thaff Restaurant'], touristPlaces: ['Vembanad Lake'] },
+            { id: 5, name: 'Udaipur', location: 'Rajasthan', mood: 'Romantic', budget: 'Luxury', season: 'Winter', image: 'https://images.unsplash.com/photo-1615836245337-f5b9b2303f10?w=800&auto=format&fit=crop', description: 'Regal palaces and boat rides.', rush: { peak: 70, quiet: 30, peakT: '5 PM', quietT: '9 AM' }, dishes: ['Laal Maas'], restaurants: ['Ambrai'], touristPlaces: ['City Palace'] },
+            { id: 6, name: 'Coorg', location: 'Karnataka', mood: 'Adventurous', budget: 'Mid-range', season: 'Monsoon', image: 'https://images.unsplash.com/photo-1710612198146-77512950a4b7?w=800&auto=format&fit=crop', description: 'Coffee estates and monsoon mist.', rush: { peak: 55, quiet: 12, peakT: '12 PM', quietT: '6 AM' }, dishes: ['Pandi Curry'], restaurants: ['Tiger Tiger'], touristPlaces: ['Abbey Falls'] },
+            { id: 7, name: 'Varanasi', location: 'Uttar Pradesh', mood: 'Spiritual', budget: 'Budget', season: 'Winter', image: 'https://images.unsplash.com/photo-1706186839147-0d708602587b?w=800&auto=format&fit=crop', description: 'Witness ancient traditions.', rush: { peak: 100, quiet: 40, peakT: '6 PM', quietT: '4 AM' }, dishes: ['Banarasi Chaat'], restaurants: ['Kashi Chat Bhandar'], touristPlaces: ['Ganga Aarti'] },
+            { id: 8, name: 'Munnar', location: 'Kerala', mood: 'Relaxed', budget: 'Budget', season: 'Winter', image: 'https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=800&auto=format&fit=crop', description: 'Rolling tea gardens.', rush: { peak: 65, quiet: 15, peakT: '12 PM', quietT: '6 AM' }, dishes: ['Idiyappam'], restaurants: ['Rapsy Restaurant'], touristPlaces: ['Tea Museum'] }
+        ];
+
+        let state = {
+            filters: { mood: null, budget: null, season: null },
+            search: "",
+            token: localStorage.getItem('token'),
+            favs: JSON.parse(localStorage.getItem('bharat_favs') || '[]'),
+            itinerary: [],
+            viewFavs: false
+        };
+
+        async function fetchItinerary() {
+            if (!state.token) return;
+            try {
+                const res = await fetch(`${API_BASE}/itinerary`, { headers: { 'Authorization': state.token } });
+                if (res.ok) state.itinerary = await res.json();
+                renderTripList();
+                updateTripBadge();
+                updateUserIcon();
+            } catch (err) { console.log('Backend offline'); }
+            renderGrid();
+        }
+
+        window.onload = () => { fetchItinerary(); renderGrid(); };
+
+        function switchToSignup() { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('signupForm').classList.remove('hidden'); }
+        function switchToLogin() { document.getElementById('signupForm').classList.add('hidden'); document.getElementById('loginForm').classList.remove('hidden'); }
+
+        async function handleLogin() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPass').value;
+            if(!email || !password) return alert('Fill all fields');
+            try {
+                const res = await fetch(`${API_BASE}/auth/login`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email, password}) });
+                const data = await res.json();
+                if(res.ok) { localStorage.setItem('token', data.token); location.reload(); }
+                else alert(data.error);
+            } catch(e) { alert('Server error. Check if your server is running!'); }
+        }
+
+        async function handleSignup() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPass').value;
+            if(!email || !password) return alert('Fill all fields');
+            try {
+                const res = await fetch(`${API_BASE}/auth/register`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email, password}) });
+                const data = await res.json();
+                if(res.ok) { alert('Registered! Now please Login.'); switchToLogin(); }
+                else alert(data.error);
+            } catch(e) { alert('Server error during registration'); }
+        }
+
+        function handleLogout() { localStorage.removeItem('token'); location.reload(); }
+
+        function renderGrid() {
+            const grid = document.getElementById('destinationGrid');
+            const filtered = DESTINATIONS.filter(item => {
+                return (!state.filters.mood || item.mood === state.filters.mood) &&
+                       (!state.filters.budget || item.budget === state.filters.budget) &&
+                       (!state.filters.season || item.season === state.filters.season) &&
+                       (!state.search || item.name.toLowerCase().includes(state.search)) &&
+                       (!state.viewFavs || state.favs.includes(item.id));
+            });
+
+            grid.innerHTML = filtered.map(item => `
+                <div class="group bg-white rounded-[2rem] border overflow-hidden cursor-pointer hover:shadow-2xl transition-all" onclick="openDetails(${item.id})">
+                    <div class="h-64 relative overflow-hidden">
+                        <img src="${item.image}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        <button onclick="toggleFavorite(${item.id}, event)" class="absolute top-5 right-5 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white ${state.favs.includes(item.id) ? 'bg-white text-red-500' : ''}">
+                            <i class="${state.favs.includes(item.id) ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="text-xl font-bold">${item.name}</h3>
+                            <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded uppercase">${item.budget}</span>
+                        </div>
+                        <p class="text-slate-500 text-xs line-clamp-2 mb-4">${item.description}</p>
+                        <div class="space-y-3 pt-3 border-t border-slate-50">
+                            <div><div class="flex justify-between text-[10px] font-bold text-slate-400 mb-1"><span>Peak (${item.rush.peakT})</span><span>${item.rush.peak}%</span></div>
+                            <div class="rush-bar"><div class="rush-fill bg-orange-500" style="width: ${item.rush.peak}%"></div></div></div>
+                            <div><div class="flex justify-between text-[10px] font-bold text-slate-400 mb-1"><span>Quiet (${item.rush.quietT})</span><span>${item.rush.quiet}%</span></div>
+                            <div class="rush-bar"><div class="rush-fill bg-emerald-500" style="width: ${item.rush.quiet}%"></div></div></div>
+                        </div>
+                    </div>
+                </div>`).join('');
+            document.getElementById('emptyState').classList.toggle('hidden', filtered.length > 0);
+        }
+
+        async function addToTrip(id) {
+            if(!state.token) return openAuthModal();
+            try {
+                const res = await fetch(`${API_BASE}/itinerary`, { method: 'POST', headers: {'Authorization': state.token, 'Content-Type': 'application/json'}, body: JSON.stringify({destId: id})});
+                if(res.ok) { state.itinerary = await res.json(); updateTripBadge(); closeModal('detailsModal'); renderTripList(); }
+            } catch(e) { alert('Backend Error'); }
+        }
+
+        async function removeFromTrip(id) {
+            try {
+                const res = await fetch(`${API_BASE}/itinerary/${id}`, { method: 'DELETE', headers: {'Authorization': state.token}});
+                if(res.ok) { state.itinerary = await res.json(); renderTripList(); updateTripBadge(); }
+            } catch(e) { alert('Backend Error'); }
+        }
+
+        function openDetails(id) {
+            const item = DESTINATIONS.find(x => x.id === id);
+            document.getElementById('modalImg').src = item.image;
+            document.getElementById('modalTitle').innerText = item.name;
+            document.getElementById('modalLoc').querySelector('span').innerText = item.location;
+            document.getElementById('modalDishes').innerHTML = (item.dishes || []).map(d => `<li class="text-xs font-bold text-slate-600 bg-slate-50 p-2 rounded-lg">• ${d}</li>`).join('');
+            document.getElementById('modalRestaurants').innerHTML = (item.restaurants || []).map(r => `<div class="p-3 bg-slate-50 rounded-xl text-xs font-bold">${r}</div>`).join('');
+            document.getElementById('modalTouristPlaces').innerHTML = (item.touristPlaces || []).map(p => `<div class="p-3 border rounded-xl text-xs font-bold">${p}</div>`).join('');
+            
+            const btn = document.getElementById('itineraryBtn');
+            const inTrip = state.itinerary.includes(id);
+            btn.innerText = inTrip ? 'Already in Trip' : 'Add to My Trip';
+            btn.className = inTrip ? 'flex-1 py-4 bg-slate-100 text-slate-400 font-bold rounded-2xl cursor-not-allowed' : 'flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl';
+            btn.onclick = () => inTrip ? null : addToTrip(id);
+            openModal('detailsModal');
+        }
+
+        function renderTripList() {
+            const list = document.getElementById('tripList');
+            document.getElementById('agentContainer').classList.toggle('hidden', state.itinerary.length < 2);
+            document.getElementById('aiTripCounter').innerText = `${state.itinerary.length} Cities Selected`;
+            if(state.itinerary.length === 0) { list.innerHTML = `<p class="text-center py-10 opacity-30">Plan is empty.</p>`; return; }
+            list.innerHTML = state.itinerary.map(id => {
+                const d = DESTINATIONS.find(x => x.id === id);
+                return `<div class="flex items-center justify-between p-4 bg-slate-50 border rounded-2xl">
+                    <div class="flex items-center gap-3"><img src="${d.image}" class="w-10 h-10 rounded-lg object-cover"><span class="font-bold text-sm">${d.name}</span></div>
+                    <button onclick="removeFromTrip(${d.id})" class="text-slate-300 hover:text-red-500"><i class="fa-solid fa-trash-can"></i></button>
+                </div>`;
+            }).join('');
+        }
+
+        async function callN8nAgent() {
+            const btn = document.getElementById('agentCallBtn');
+            const results = document.getElementById('agentResults');
+            const content = document.getElementById('agentContent');
+            const names = state.itinerary.map(id => DESTINATIONS.find(x => x.id === id)?.name);
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i>`;
+            document.getElementById('agentInitialMsg').classList.add('hidden');
+            results.classList.remove('hidden');
+            document.getElementById('agentLoading').classList.remove('hidden');
+            try {
+                const res = await fetch(N8N_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({itinerary: names}) });
+                const data = await res.json();
+                document.getElementById('agentLoading').classList.add('hidden');
+                if (data.suggestions) {
+                    content.innerHTML = `
+                        <h5 class="text-sm font-bold mb-2">Optimized Route Suggestions</h5>
+                        ${data.suggestions.map(s => `
+                            <div class="p-3 bg-white border rounded-xl text-[11px] font-bold shadow-sm whitespace-pre-line">
+                                ${s.replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+                            </div>
+                        `).join('')}
+                    `;
+                } else {
+                    content.innerHTML = `<div class="text-red-500 text-xs">No suggestions returned.</div>`;
+                }
+            } catch(e) {
+                content.innerHTML = `<div class="text-red-500 text-xs">AI currently unavailable.</div>`;
+            } finally { btn.innerHTML = 'Optimize'; }
+        }
+
+        function toggleFavorite(id, e) { e.stopPropagation(); const idx = state.favs.indexOf(id); idx > -1 ? state.favs.splice(idx, 1) : state.favs.push(id); localStorage.setItem('bharat_favs', JSON.stringify(state.favs)); renderGrid(); }
+        function setFilter(t, v) { state.filters[t] = state.filters[t] === v ? null : v; renderGrid(); }
+        function handleSearch() { state.search = document.getElementById('searchInput').value.toLowerCase(); renderGrid(); }
+        function openModal(id) { document.getElementById(id).classList.add('active'); if(id === 'tripModal') renderTripList(); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function openTripModal() { openModal('tripModal'); }
+        function openAuthModal(mode) { if(mode === 'signup') switchToSignup(); else switchToLogin(); openModal('authModal'); }
+        function toggleFavoritesOnly() { state.viewFavs = !state.viewFavs; renderGrid(); }
+        function updateTripBadge() { const b = document.getElementById('tripBadge'); b.innerText = state.itinerary.length; b.classList.toggle('hidden', state.itinerary.length === 0); }
+        function updateUserIcon() { document.getElementById('userStatusIcon').style.color = state.token ? '#ea580c' : '#64748b'; document.getElementById('logoutBtn').classList.toggle('hidden', !state.token); document.getElementById('joinBtn').classList.toggle('hidden', !!state.token); }
+        function alertMessage(m) { const msg = document.createElement('div'); msg.className = "fixed bottom-10 left-1/2 -translate-x-1/2 px-6 py-3 bg-slate-900 text-white rounded-full text-sm font-bold z-[200] animate-bounce"; msg.innerText = m; document.body.appendChild(msg); setTimeout(() => msg.remove(), 3000); }
+        function resetFilters() { state.filters = { mood: null, budget: null, season: null }; renderGrid(); }
+    </script>
+</body>
+</html>
