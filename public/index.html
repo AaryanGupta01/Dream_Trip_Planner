@@ -453,15 +453,38 @@
             document.getElementById('modalImg').src = item.image;
             document.getElementById('modalTitle').innerText = item.name;
             document.getElementById('modalLoc').querySelector('span').innerText = item.location;
-            document.getElementById('modalDishes').innerHTML = (item.dishes || []).map(d => `<li class="text-xs font-bold text-slate-600 bg-slate-50 p-2 rounded-lg">• ${d}</li>`).join('');
-            document.getElementById('modalRestaurants').innerHTML = (item.restaurants || []).map(r => `<div class="p-3 bg-slate-50 rounded-xl text-xs font-bold">${r}</div>`).join('');
-            document.getElementById('modalTouristPlaces').innerHTML = (item.touristPlaces || []).map(p => `<div class="p-3 border rounded-xl text-xs font-bold">${p}</div>`).join('');
+            
+            // Local Food remains a static list
+            document.getElementById('modalDishes').innerHTML = (item.dishes || []).map(d => 
+                `<li class="text-xs font-bold text-slate-600 bg-slate-50 p-2 rounded-lg">• ${d}</li>`
+            ).join('');
+            
+            // UPDATE: Restaurants are now clickable Google Maps Navigation links
+            document.getElementById('modalRestaurants').innerHTML = (item.restaurants || []).map(r => {
+                const mapQuery = encodeURIComponent(`${r}, ${item.name}`);
+                return `<a href="https://www.google.com/maps/dir/?api=1&destination=${mapQuery}" target="_blank" 
+                           class="flex justify-between items-center p-3 bg-slate-50 rounded-xl text-xs font-bold hover:bg-slate-100 hover:text-orange-600 transition-colors">
+                            <span>${r}</span>
+                            <i class="fa-solid fa-location-arrow text-slate-400"></i>
+                        </a>`;
+            }).join('');
+            
+            // UPDATE: Highlights are now clickable Google Maps Navigation links
+            document.getElementById('modalTouristPlaces').innerHTML = (item.touristPlaces || []).map(p => {
+                const mapQuery = encodeURIComponent(`${p}, ${item.name}`);
+                return `<a href="https://www.google.com/maps/dir/?api=1&destination=${mapQuery}" target="_blank" 
+                           class="flex justify-between items-center p-3 border rounded-xl text-xs font-bold hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 transition-colors">
+                            <span>${p}</span>
+                            <i class="fa-solid fa-location-arrow text-slate-400"></i>
+                        </a>`;
+            }).join('');
             
             const btn = document.getElementById('itineraryBtn');
             const inTrip = state.itinerary.includes(id);
             btn.innerText = inTrip ? 'Already in Trip' : 'Add to My Trip';
             btn.className = inTrip ? 'flex-1 py-4 bg-slate-100 text-slate-400 font-bold rounded-2xl cursor-not-allowed' : 'flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl';
             btn.onclick = () => inTrip ? null : addToTrip(id);
+            
             openModal('detailsModal');
         }
 
