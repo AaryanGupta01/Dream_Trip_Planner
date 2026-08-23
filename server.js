@@ -5,6 +5,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const itineraryRoutes = require('./routes/itinerary');
 const travelHistoryRoutes = require('./routes/travelHistory');
+const mistralRoutes = require('./routes/mistral');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -16,6 +17,7 @@ app.use(express.static('public'));
 app.use('/api/auth', authRoutes);
 app.use('/api/itinerary', itineraryRoutes);
 app.use('/api/travel-history', travelHistoryRoutes);
+app.use('/api/mistral', mistralRoutes);
 
 // MongoDB Connection
 const DB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bharat_explorer';

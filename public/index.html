@@ -327,7 +327,7 @@
 
     <script>
         const API_BASE = '/api';
-        const N8N_URL = 'https://ag08.app.n8n.cloud/webhook-test/tourist-places';
+        const N8N_URL = `${API_BASE}/mistral/agent`; // switched to Mistral backend
         
         const DESTINATIONS = [
             { id: 1, name: 'Rishikesh', location: 'Uttarakhand', mood: 'Spiritual', budget: 'Budget', season: 'Winter', image: 'https://images.unsplash.com/photo-1607406374368-809f8ec7f118?w=800&auto=format&fit=crop', description: 'The Yoga Capital of the World.', rush: { peak: 85, quiet: 20, peakT: '10 AM', quietT: '5 AM' }, dishes: ['Aloo Puri', 'Chai'], restaurants: ['Little Buddha Cafe'], touristPlaces: ['Beatles Ashram', 'Laxman Jhula'] },
